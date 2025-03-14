@@ -1,0 +1,109 @@
+# Guía de Pruebas con Jest y Supertest
+
+## 1. Estructura General de una Prueba con Jest y Supertest
+
+```javascript
+const request = require('supertest'); // Importa Supertest para hacer peticiones HTTP
+const app = require('../app'); // Importa la aplicación de Express
+
+describe('Pruebas de API', () => {
+    test('Debe obtener todos los productos', async () => {
+        const response = await request(app).get('/productos');
+        expect(response.status).toBe(200); // Verifica que el estado sea 200
+        expect(Array.isArray(response.body)).toBe(true); // Verifica que el cuerpo sea un array
+    });
+});
+```
+
+---
+
+## 2. Pruebas Agrupadas por Operación
+
+### **GET: Obtener Datos**
+```javascript
+test('Debe obtener todos los productos', async () => {
+    const response = await request(app).get('/productos');
+    expect(response.status).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
+});
+
+test('Debe obtener un producto por ID', async () => {
+    const response = await request(app).get('/productos/1');
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('id');
+});
+```
+
+### **POST: Crear un Nuevo Producto**
+```javascript
+test('Debe crear un nuevo producto', async () => {
+    const nuevoProducto = { nombre: 'Producto de prueba', precio: 100 };
+    const response = await request(app).post('/productos').send(nuevoProducto);
+    expect(response.status).toBe(201);
+    expect(response.body).toHaveProperty('id');
+});
+```
+
+### **PUT: Actualizar un Producto**
+```javascript
+test('Debe actualizar un producto existente', async () => {
+    const cambios = { precio: 150 };
+    const response = await request(app).put('/productos/1').send(cambios);
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('precio', 150);
+});
+```
+
+### **DELETE: Eliminar un Producto**
+```javascript
+test('Debe eliminar un producto', async () => {
+    const response = await request(app).delete('/productos/1');
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('mensaje', 'Producto eliminado');
+});
+```
+
+---
+
+## 3. Código Reutilizable en Todas las Pruebas
+
+Para evitar repetir código innecesario, podemos definir funciones reutilizables para la creación de datos de prueba y la ejecución de peticiones HTTP.
+
+### **Funciones Utilitarias**
+```javascript
+const crearProducto = async (producto) => {
+    return await request(app).post('/productos').send(producto);
+};
+
+const obtenerProductoPorId = async (id) => {
+    return await request(app).get(`/productos/${id}`);
+};
+
+const eliminarProducto = async (id) => {
+    return await request(app).delete(`/productos/${id}`);
+};
+```
+
+### **Uso de Variables Reutilizables**
+```javascript
+test('Debe crear y luego obtener un producto', async () => {
+    const nuevoProducto = { nombre: 'Nuevo producto', precio: 200 };
+    const createdResponse = await crearProducto(nuevoProducto);
+    expect(createdResponse.status).toBe(201);
+
+    const id = createdResponse.body.id;
+    const fetchedResponse = await obtenerProductoPorId(id);
+    expect(fetchedResponse.status).toBe(200);
+    expect(fetchedResponse.body).toHaveProperty('nombre', 'Nuevo producto');
+});
+```
+
+### **Explicación de la Sintaxis Clave**
+- `const response = await request(app).get('/ruta');`: Realiza una petición HTTP a la API.
+- `expect(response.status).toBe(200);`: Verifica que el estado HTTP sea 200.
+- `expect(response.body).toHaveProperty('id');`: Comprueba que el cuerpo de la respuesta tiene la propiedad `id`.
+- `const newTask = { title: 'Tarea', description: 'Descripción' };`: Define un objeto que será enviado en la petición.
+- `const createdTask = await request(app).post('/api/todos').send(newTask);`: Crea un nuevo recurso en la API.
+
+Con estas técnicas, optimizamos las pruebas y reducimos la duplicación de código.
+
